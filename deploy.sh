@@ -92,8 +92,8 @@ then
     # docker context 为本地, 直接将配置文件拷贝到本地server_path
     echo "mkdir -p $server_path"
     mkdir -p $server_path
-#    echo "cp -f $SETTING $server_path"
-#    cp -f $SETTING $server_path
+    echo "cp -f $SETTING $server_path"
+    cp -f $SETTING $server_path
   fi
   VOLUME="-v $server_path:/app/cone-writing-server/configs"
   ENV="-e DJANGO_SETTINGS_MODULE=configs.$(basename $SETTING .py)";
@@ -113,10 +113,10 @@ for c in $cid
       docker stop $c
       docker rm $c
   done
-#echo "docker build -t $PROJECT ."
-#docker build -t $PROJECT .
+echo "docker build -t $PROJECT ."
+docker build -t $PROJECT .
 
-echo "docker run -d $VOLUME  $GUNICORN_ENV $ENV -p $PORT:8000 --log-opt max-size=100m --name $PROJECT $PROJECT"
-docker run -d $VOLUME  $GUNICORN_ENV $ENV -p $PORT:8000 --log-opt max-size=100m --name $PROJECT $PROJECT
+echo "docker run -d -v /etc/cone-writing/static/:/app/cone-writing-server/static/ $VOLUME  $GUNICORN_ENV $ENV -p $PORT:8000 --log-opt max-size=100m --name $PROJECT $PROJECT"
+docker run -d -v /etc/cone-writing/static/:/app/cone-writing-server/static/ $VOLUME  $GUNICORN_ENV $ENV -p $PORT:8000 --log-opt max-size=100m --name $PROJECT $PROJECT
 
 echo "Done."
