@@ -123,7 +123,7 @@ class TagViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, DestroyMode
             raise NotFound()
 
 
-class FeelingViewSet(ModelViewSet):
+class FeelingViewSet(WritingViewMixin, ModelViewSet):
     serializer_class = serializers.FeelingSerializer
     queryset = models.Feeling.objects.all()
 
@@ -185,14 +185,13 @@ class MomentViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDes
         return Response(groups)
 
 
-class ThingViewSet(CreateModelMixin, ListModelMixin, MultiDestroyModelMixin, GenericViewSet):
+class ThingViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDestroyModelMixin, GenericViewSet):
     serializer_class = serializers.ThingSerializer
     queryset = models.Thing.objects.all().select_related('parent', 'feeling')
-    # pagination_class = pagination.ThingPagination
     filterset_class = filters.ThingFilter
 
 
-class FeelingRecordView(ModelViewSet):
+class FeelingRecordView(WritingViewMixin, ModelViewSet):
     serializer_class = serializers.FeelingRecordSerializer
     queryset = models.FeelingRecord.objects.all().select_related('feeling')
     pagination_class = pagination.DefaultPagination

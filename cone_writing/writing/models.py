@@ -165,6 +165,7 @@ class FeelingRecord(models.Model):
     thing = models.ForeignKey(Thing, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='事情',
                               null=True, blank=True)
     notify_time = models.DateTimeField(verbose_name='通知时间', null=True, blank=True)
+    user = models.ForeignKey(UserModel, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='用户')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 

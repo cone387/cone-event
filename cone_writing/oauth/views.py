@@ -125,7 +125,7 @@ class DingDingOauthView(APIView):
             oauth_user.oauth_name = name
             user = oauth_user.user
         except OauthUser.DoesNotExist:
-            user = User(username=openId, is_active=True, is_staff=True)
+            user = User(username=name, is_active=True, is_staff=True)
             user.set_password(openId)
             user.save()
             oauth_user = OauthUser.objects.create(oauth_id=openId, oauth_detail=access_info, oauth_name=name,

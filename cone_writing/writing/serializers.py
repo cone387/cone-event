@@ -114,7 +114,7 @@ class FeelingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Feeling
-        exclude = ['update_time', 'create_time']
+        exclude = ['create_time']
 
 
 class WritingSerializer(serializers.ModelSerializer):
