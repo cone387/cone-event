@@ -29,24 +29,6 @@ class MediaFileFiledFile(FieldFile):
 class MediaFileFiled(models.FileField):
     attr_class = MediaFileFiledFile
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, storage=QiniuStorage(), **kwargs)
-
-    # def save_form_data(self, instance, data):
-    #     if data is not None:
-    #         self.storage.engine = instance.engine
-    #         setattr(instance, self.name, data)
-    #         instance.size = data.size
-
-    # def pre_save(self, model_instance: 'Media', add):
-    #     if model_instance.engine == MediaEngine.QINIU:
-    #         storage = QiniuStorage()
-    #     else:
-    #         storage = FileSystemStorage()
-    #     self.storage = storage
-    #     file = super().pre_save(model_instance, add)
-    #     return file
-
 
 def upload_to(instance: 'Media', filename: str):
     return 'writing/%s/%s/%s' % (
@@ -127,11 +109,11 @@ class Feeling(models.Model):
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
     class Meta:
-        verbose_name_plural = verbose_name = 'Feeling'
+        verbose_name_plural = verbose_name = '感受'
         db_table = 'user_feeling'
 
     def __str__(self):
-        return self.emoji
+        return f'{self.emoji}({self.name})'
 
 
 class Moment(Writing):
@@ -154,3 +136,42 @@ class Moment(Writing):
 
     def __str__(self):
         return self.head()
+
+
+class Thing(models.Model):
+    feeling = models.ForeignKey(Feeling, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='心情',
+                                null=True, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.DO_NOTHING, db_constraint=False, null=True, blank=True,
+                               related_name='children', verbose_name='上级')
+    name = models.CharField(max_length=100, verbose_name='事情')
+    explain = models.CharField(max_length=500, verbose_name='解释', null=True, blank=True)
+    user = models.ForeignKey(UserModel, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='用户')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        verbose_name_plural = verbose_name = '事情'
+        ordering = ('-id', )
+        db_table = 'user_thing'
+
+    def __str__(self):
+        return self.name
+
+
+class FeelingRecord(models.Model):
+    feeling = models.ForeignKey(Feeling, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='心情')
+    moment = models.ForeignKey(Moment, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='瞬间',
+                               null=True, blank=True)
+    thing = models.ForeignKey(Thing, on_delete=models.DO_NOTHING, db_constraint=False, verbose_name='事情',
+                              null=True, blank=True)
+    notify_time = models.DateTimeField(verbose_name='通知时间', null=True, blank=True)
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        verbose_name_plural = verbose_name = '记录'
+        ordering = ('-id', )
+        db_table = 'user_feeling_record'
+
+    def __str__(self):
+        return self.feeling.name

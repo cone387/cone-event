@@ -26,3 +26,26 @@ class MomentFilter(filters.FilterSet):
             "occurred_time": ["gte", "lte"],
             "create_time": ["gte", "lte"],
         }
+
+
+class ThingFilter(filters.FilterSet):
+    has_feeling = filters.BooleanFilter(field_name='feeling_id', lookup_expr='isnull', exclude=True)
+
+    class Meta:
+        model = models.Thing
+        fields = {
+            "name": ["contains"],
+            "feeling__emoji": ["exact"],
+            "feeling__name": ["exact"],
+            "create_time": ["gte", "lte"],
+        }
+
+
+class FeelingRecordFilter(filters.FilterSet):
+    class Meta:
+        model = models.FeelingRecord
+        fields = {
+            "feeling__emoji": ["exact"],
+            "feeling__name": ["exact"],
+            "create_time": ["gte", "lte"],
+        }

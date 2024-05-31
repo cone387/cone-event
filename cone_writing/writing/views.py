@@ -2,9 +2,10 @@ from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.mixins import CreateModelMixin, ListModelMixin, DestroyModelMixin
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework.mixins import CreateModelMixin, ListModelMixin, DestroyModelMixin, UpdateModelMixin
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,11 +13,12 @@ from drf_multiple_model.views import ObjectMultipleModelAPIView
 from drf_multiple_model.pagination import MultipleModelLimitOffsetPagination
 from django.db.models import Q
 from django.db import connection
-from .models import Tag, Writing, Moment, Media, Feeling, upload_to
+from .models import upload_to
 from .choices import WritingStatus
 from . import serializers
 from . import filters
 from . import pagination
+from . import models
 from utils import qiniu_cloud
 
 
@@ -40,7 +42,7 @@ class QiNiuStorageView:
         if not filename:
             return Response(data={'error': 'filename is required'}, status=status.HTTP_400_BAD_REQUEST)
         model = request.query_params.get('model')
-        media = Media(model=model, user=request.user)
+        media = models.Media(model=model, user=request.user)
         key = upload_to(media, filename)
         token = qiniu_cloud.gen_token(upload_to(media, filename))
         return Response(data={'key': key, 'token': token})
@@ -48,7 +50,7 @@ class QiNiuStorageView:
 
 class MediaViewSet(CreateModelMixin, DestroyModelMixin, GenericViewSet):
     serializer_class = serializers.MediaSerializer
-    queryset = Media.objects.all()
+    queryset = models.Media.objects.all()
 
 
 class WritingViewMixin:
@@ -107,7 +109,7 @@ class TagViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, DestroyMode
     """
         can: create, list, destroy
     """
-    queryset = Tag.objects.all()
+    queryset = models.Tag.objects.all()
     serializer_class = serializers.TagSerializer
     permission_classes = (IsAuthenticated, )
     filter_backends = (DjangoFilterBackend,)
@@ -117,8 +119,13 @@ class TagViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, DestroyMode
     def perform_create(self, serializer):
         try:
             serializer.save(user=self.request.user)
-        except Tag.DoesNotExist:
+        except models.Tag.DoesNotExist:
             raise NotFound()
+
+
+class FeelingViewSet(ModelViewSet):
+    serializer_class = serializers.FeelingSerializer
+    queryset = models.Feeling.objects.all()
 
 
 class MomentViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDestroyModelMixin, GenericViewSet):
@@ -126,7 +133,8 @@ class MomentViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDes
         option: create, list, destroy
     """
     serializer_class = serializers.MomentSerializer
-    queryset = Moment.objects.filter(~Q(writing_status=WritingStatus.DELETED))
+    queryset = models.Moment.objects.filter(~Q(writing_status=WritingStatus.DELETED)
+                                            ).select_related('feeling').prefetch_related('tags')
     pagination_class = pagination.MomentPagination
     filterset_class = filters.MomentFilter
 
@@ -136,7 +144,7 @@ class MomentViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDes
     def group(request: Request):
         """
         :param request:
-        :param by: group by occurred_time_date, week, month, year
+        :by: group by occurred_time_date, week, month, year
         :return:
         """
         by: str = request.query_params.get('by', '')
@@ -151,8 +159,8 @@ class MomentViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDes
         for by in bys:
             if by == 'month':
                 data = queryset.extra(
-                    # select={'month': "DATE_FORMAT('occurred_time', '%%Y-%%m')"}  # for mysql
-                    select={'month': "strftime('%%Y-%%m', occurred_time)"}     # for sqlite
+                    select={'month': "DATE_FORMAT('occurred_time', '%%Y-%%m')"}  # for mysql
+                    # select={'month': "strftime('%%Y-%%m', occurred_time)"}     # for sqlite
                 ).values('month').annotate(count=Count('id')).values('month', 'count').order_by('-month')
             elif by == 'feeling':
                 with connection.cursor() as cursor:
@@ -177,13 +185,27 @@ class MomentViewSet(WritingViewMixin, CreateModelMixin, ListModelMixin, MultiDes
         return Response(groups)
 
 
+class ThingViewSet(CreateModelMixin, ListModelMixin, MultiDestroyModelMixin, GenericViewSet):
+    serializer_class = serializers.ThingSerializer
+    queryset = models.Thing.objects.all().select_related('parent', 'feeling')
+    # pagination_class = pagination.ThingPagination
+    filterset_class = filters.ThingFilter
+
+
+class FeelingRecordView(ModelViewSet):
+    serializer_class = serializers.FeelingRecordSerializer
+    queryset = models.FeelingRecord.objects.all().select_related('feeling')
+    pagination_class = pagination.DefaultPagination
+    filterset_class = filters.FeelingRecordFilter
+
+
 class SearchView(ObjectMultipleModelAPIView):
     permission_classes = (IsAuthenticated,)
     pagination_class = MultipleModelLimitOffsetPagination
 
     querylist = [
         {
-            'queryset': Moment.objects.filter(~Q(writing_status=WritingStatus.DELETED)),
+            'queryset': models.Moment.objects.filter(~Q(writing_status=WritingStatus.DELETED)),
             'serializer_class': serializers.MomentSerializer,
             'filter_fn': filters.filter_moment,
             'label': 'moment'

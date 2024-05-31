@@ -196,3 +196,41 @@ class MomentSerializer(WritingSerializer):
     class Meta:
         model = models.Moment
         exclude = ['update_time', 'writing_status']
+
+
+class ThingSerializer(serializers.ModelSerializer):
+    feeling = FeelingSerializer(read_only=True)
+    feeling_id = serializers.PrimaryKeyRelatedField(
+        source='feeling', write_only=True, allow_null=True, required=False, label='心情',
+        queryset=models.Feeling.objects.all())
+
+    parent = serializers.SerializerMethodField()
+
+    def get_parent(self, obj: models.Thing):
+        if obj.parent:
+            return self.__class__(obj.parent).data
+
+    class Meta:
+        model = models.Thing
+        exclude = ['update_time', 'user']
+
+
+class FeelingRecordSerializer(serializers.ModelSerializer):
+    feeling = FeelingSerializer(read_only=True)
+    feeling_id = serializers.PrimaryKeyRelatedField(
+        source='feeling', write_only=True, allow_null=True, required=False, label='心情',
+        queryset=models.Feeling.objects.all())
+
+    thing = ThingSerializer(read_only=True)
+    thing_id = serializers.PrimaryKeyRelatedField(
+        source='thing', write_only=True, allow_null=True, required=False, label='事情',
+        queryset=models.Thing.objects.all())
+
+    moment = MomentSerializer(read_only=True)
+    moment_id = serializers.PrimaryKeyRelatedField(
+        source='moment', write_only=True, allow_null=True, required=False, label='瞬间',
+        queryset=models.Moment.objects.all())
+
+    class Meta:
+        model = models.FeelingRecord
+        exclude = ['update_time']

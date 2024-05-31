@@ -133,6 +133,33 @@ class MomentAdmin(UserAdmin):
         ).select_related('feeling').prefetch_related('tags', 'medias')
 
 
+class ThingAdmin(UserAdmin):
+    list_display = ('id', 'feeling', 'parent', 'name', 'children', 'create_time')
+
+    fields = ('feeling', 'parent', 'name', 'explain',)
+
+    list_filter = ('feeling__name', )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('feeling').prefetch_related('children')
+
+    def children(self, obj: models.Thing):
+        children = []
+        for child in obj.children.all()[:5]:
+            children.append(child.name)
+        return '\n'.join(children)
+    children.short_description = '子事件'
+
+
+class FeelingRecordAdmin(admin.ModelAdmin):
+    list_display = ('id', 'feeling', 'thing', 'moment', 'create_time')
+    fields = (
+        'feeling',
+        'thing',
+        'moment',
+    )
+
+
 admin.site.site_header = 'Writing Manage'
 admin.site.site_title = 'Writing Manage'
 
@@ -140,3 +167,5 @@ admin.site.register(models.Tag, TagAdmin)
 admin.site.register(models.Media, MediaAdmin)
 admin.site.register(models.Feeling, FeelingAdmin)
 admin.site.register(models.Moment, MomentAdmin)
+admin.site.register(models.Thing, ThingAdmin)
+admin.site.register(models.FeelingRecord, FeelingRecordAdmin)
