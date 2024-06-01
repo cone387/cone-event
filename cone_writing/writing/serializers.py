@@ -171,10 +171,11 @@ class WritingSerializer(serializers.ModelSerializer):
 
 
 class FeelingPostSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = models.Feeling
-        exclude = ['update_time', 'user', 'create_time']
+        exclude = ['update_time', 'create_time']
 
 
 class MomentSerializer(WritingSerializer):
@@ -205,6 +206,7 @@ class ThingSerializer(serializers.ModelSerializer):
         queryset=models.Feeling.objects.all())
 
     parent = serializers.SerializerMethodField()
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     def get_parent(self, obj: models.Thing):
         if obj.parent:
@@ -230,6 +232,7 @@ class FeelingRecordSerializer(serializers.ModelSerializer):
     moment_id = serializers.PrimaryKeyRelatedField(
         source='moment', write_only=True, allow_null=True, required=False, label='瞬间',
         queryset=models.Moment.objects.all())
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = models.FeelingRecord
